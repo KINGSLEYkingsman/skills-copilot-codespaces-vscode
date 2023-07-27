@@ -1,50 +1,78 @@
-// create a web server that can accept incoming data from users
-// and then save that data to a file on the server
-// then read that data from the file and send it back to the user
+// Create web server
 
-// 1. create a web server using express
-// 2. create a route for GET /comments
-// 3. read the comments.json file and send back its content to the user
-// 4. create a route for POST /comments
-// 5. read the comments.json file, parse the content, add the new comment to the array, save the file again, and send back a success message to the user
+var express = require('express');
+var router = express.Router();
+var Comment = require('../models/comment');
+var User = require('../models/user');
+var Post = require('../models/post');
+var passport = require('passport');
+var LocalStrategy = require('passport-local').Strategy;
 
-const express = require('express')
-const fs = require('fs')
-const path = require('path')
-const bodyParser = require('body-parser')
+// GET request to /comments
+router.get('/', function(req, res, next) {
+  // Get all comments from the database
+  Comment.find(function(err, comments) {
+    // If there is an error, log it
+    if (err) {
+      console.log(err);
+    } else {
+      // If there is no error, render the comments view
+      res.render('comments', { comments: comments });
+    }
+  });
+});
 
-const app = express()
+// GET request to /comments/add
+router.get('/add', function(req, res, next) {
+  // Render the add comment view
+  res.render('addcomment');
+});
 
-app.use(express.static('public'))
-app.use(bodyParser.json())
+// POST request to /comments/add
+router.post('/add', function(req, res, next) {
+  // Get the data from the form
+  var name = req.body.name;
+  var email = req.body.email;
+  var body = req.body.body;
+  var post = req.body.post;
 
-app.get('/comments', (req, res) => {
-  const commentsPath = path.join(__dirname, 'comments.json')
-  const commentsJSON = fs.readFileSync(commentsPath).toString()
-  const comments = JSON.parse(commentsJSON)
+  // Create the comment object
+  var comment = new Comment({
+    name: name,
+    email: email,
+    body: body,
+    post: post
+  });
 
-  res.json(comments)
-})
+  // Save the comment object to the database
+  comment.save(function(err, comment) {
+    // If there is an error, log it
+    if (err) {
+      console.log(err);
+    } else {
+      // If there is no error, redirect to /comments
+      res.redirect('/comments');
+    }
+  });
+});
 
-app.post('/comments', (req, res) => {
-  const commentsPath = path.join(__dirname, 'comments.json')
-  const commentsJSON = fs.readFileSync(commentsPath).toString()
-  const comments = JSON.parse(commentsJSON)
+// GET request to /comments/delete/:_id
+router.get('/delete/:_id', function(req, res, next) {
+  // Get the comment id from the url
+  var _id = req.params._id;
 
-  const newComment = req.body
-  newComment.id = comments.length + 1
+  // Remove the comment from the database
+  Comment.remove({ _id: _id }, function(err) {
+    // If there is an error, log it
+    if (err) {
+      console.log(err);
+    } else {
+      // If there is no error, redirect to /comments
+      res.redirect('/comments');
+    }
+  });
+});
 
-  comments.push(newComment)
-
-  const newCommentsJSON = JSON.stringify(comments, null, 2)
-  fs.writeFileSync(commentsPath, newCommentsJSON)
-
-  res.json({
-    success: true,
-    message: 'Thanks for your comment!'
-  })
-})
-
-app.listen(3000, () => {
-  console.log('Server listening on port 3000')
-})
+// GET request to /comments/edit/:_id
+router.get('/edit/:_id', function(req, res, next) {
+  //
