@@ -1,25 +1,50 @@
-// create a web server that can respond to requests for comments
-// and send back a list of comments from the server
-// this is a node server
+// create a web server that can accept incoming data from users
+// and then save that data to a file on the server
+// then read that data from the file and send it back to the user
 
-// require the http module
-var http = require('http');
+// 1. create a web server using express
+// 2. create a route for GET /comments
+// 3. read the comments.json file and send back its content to the user
+// 4. create a route for POST /comments
+// 5. read the comments.json file, parse the content, add the new comment to the array, save the file again, and send back a success message to the user
 
-// create a server
-var server = http.createServer(function(request, response) {
-  // when a request comes in, respond with a 200 status code
-  // and send back a list of comments from the server
-  response.writeHead(200, {'Content-Type': 'text/html'});
-  response.write('<h1>Comments</h1>');
-  response.write('<ul>');
-  response.write('<li>first comment</li>');
-  response.write('<li>second comment</li>');
-  response.write('<li>third comment</li>');
-  response.write('</ul>');
-  response.end();
-});
+const express = require('express')
+const fs = require('fs')
+const path = require('path')
+const bodyParser = require('body-parser')
 
-// start the server
-server.listen(3000, function() {
-  console.log('Server listening on port 3000');
-});
+const app = express()
+
+app.use(express.static('public'))
+app.use(bodyParser.json())
+
+app.get('/comments', (req, res) => {
+  const commentsPath = path.join(__dirname, 'comments.json')
+  const commentsJSON = fs.readFileSync(commentsPath).toString()
+  const comments = JSON.parse(commentsJSON)
+
+  res.json(comments)
+})
+
+app.post('/comments', (req, res) => {
+  const commentsPath = path.join(__dirname, 'comments.json')
+  const commentsJSON = fs.readFileSync(commentsPath).toString()
+  const comments = JSON.parse(commentsJSON)
+
+  const newComment = req.body
+  newComment.id = comments.length + 1
+
+  comments.push(newComment)
+
+  const newCommentsJSON = JSON.stringify(comments, null, 2)
+  fs.writeFileSync(commentsPath, newCommentsJSON)
+
+  res.json({
+    success: true,
+    message: 'Thanks for your comment!'
+  })
+})
+
+app.listen(3000, () => {
+  console.log('Server listening on port 3000')
+})
